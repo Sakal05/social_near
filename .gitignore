@@ -4,7 +4,7 @@
 node_modules
 /.pnp
 .pnp.js
-
+package-lock.json
 # build
 /out
 /dist
@@ -29,3 +29,12 @@ node_modules
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+cache
+
+Cargo.lock
+
+.gitpod.yml
+target
+
+.cargo
