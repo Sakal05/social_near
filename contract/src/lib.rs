@@ -1,8 +1,12 @@
+use std::num::Wrapping;
+use std::u8;
+
 // Find all our documentation at https://docs.near.org
 use near_sdk::borsh::{ self, BorshDeserialize, BorshSerialize };
-use near_sdk::{ log, near_bindgen, AccountId, env };
+use near_sdk::{ near_bindgen, AccountId, env, Balance, Promise };
 use near_sdk::serde::{ Serialize, Deserialize };
 use uuid::Uuid;
+use near_sdk::json_types::U128;
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Post {
@@ -10,6 +14,8 @@ pub struct Post {
     pub author: AccountId, //account id
     pub title: String,
     pub body: String,
+    //add donation information
+    pub donation_amount: U128,
 }
 
 #[near_bindgen]
@@ -33,7 +39,9 @@ impl Posts {
             author: env::predecessor_account_id(),
             title,
             body,
+            donation_amount: U128::from(0),
         });
+        env::log_str("Post Created Successfully");
     }
 
     //function to get all posts
@@ -53,7 +61,24 @@ impl Posts {
 
     //function to delete a post
     pub fn delete_post(&mut self, post_id: String) {
-        self.posts.retain(|post| post.id!= post_id);
+        self.posts.retain(|post| post.id != post_id);
+    }
+
+    //function to donate a author of the post
+    #[payable]
+    pub fn donate_author(&mut self, post_id: String, amount: U128) {
+        match self.posts.iter_mut().find(|post| post.id == post_id) {
+            Some(post) => {
+                let donor: AccountId = env::signer_account_id();
+                let receiver_accound_id = &post.author;
+                let amount_transfer: Balance = amount.into();
+                Promise::new(receiver_accound_id.clone()).transfer(amount_transfer);
+            }
+            None => {
+                // post not found
+                env::log_str(&format!("Couldn't find post '{}'", post_id));
+            }
+        }
     }
 }
 
@@ -92,5 +117,26 @@ mod tests {
         println!("{:?}", posts);
     }
 
+    //test delete posts
+    #[test]
+    pub fn delete_post() {
+        let mut post = Posts::new();
+        post.new_post("title".to_string(), "body".to_string());
+        post.new_post("title 1".to_string(), "body 1".to_string());
+        post.delete_post(post.posts[0].id.to_string());
+        let posts = post.get_posts();
+        assert_eq!(posts.len(), 1);
+        println!("{:?}", posts);
+    }
 
+    //test donate function
+    #[test]
+    pub fn donate_author() {
+        let mut post = Posts::new();
+        post.new_post("title".to_string(), "body".to_string());
+        post.new_post("title 1".to_string(), "body 1".to_string());
+        post.donate_author(post.posts[0].id.to_string(), U128::from(100));
+        
+        
+    }
 }
