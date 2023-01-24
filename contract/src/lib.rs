@@ -72,12 +72,23 @@ impl Posts {
                 let donor: AccountId = env::signer_account_id();
                 let receiver_accound_id = &post.author;
                 let amount_transfer: Balance = amount.into();
+                let mut total_donation: u128 = post.donation_amount.clone().into();
+                total_donation += amount_transfer;
                 Promise::new(receiver_accound_id.clone()).transfer(amount_transfer);
+                post.donation_amount = U128::from(total_donation);
             }
             None => {
                 // post not found
                 env::log_str(&format!("Couldn't find post '{}'", post_id));
             }
+        }
+    }
+
+    //function to get all donations from the post
+    pub fn get_donations(&mut self, post_id: String) -> Option<u128> {
+        match self.posts.iter().find(|post| post.id == post_id) {
+            Some(post) => Some(post.donation_amount.into()),
+            None => None,
         }
     }
 }
@@ -129,14 +140,28 @@ mod tests {
         println!("{:?}", posts);
     }
 
-    //test donate function
+    //test success donate function
     #[test]
-    pub fn donate_author() {
+    pub fn sucess_donate_author() {
         let mut post = Posts::new();
         post.new_post("title".to_string(), "body".to_string());
         post.new_post("title 1".to_string(), "body 1".to_string());
-        post.donate_author(post.posts[0].id.to_string(), U128::from(100));
-        
-        
+        let donate1 = post.donate_author(post.posts[0].id.to_string(), U128::from(100));
+        let donate2 = post.donate_author(post.posts[0].id.to_string(), U128::from(100));
+        let donate3 = post.donate_author(post.posts[0].id.to_string(), U128::from(100));
+        assert_eq!(post.posts[0].donation_amount, U128::from(300));
     }
+
+    //test fail donate function
+    #[test]
+    pub fn fail_donate_author() {
+        let mut post = Posts::new();
+        post.new_post("title".to_string(), "body".to_string());
+        post.new_post("title 1".to_string(), "body 1".to_string());
+        let donate1 = post.donate_author(post.posts[0].id.to_string(), U128::from(100));
+        let donate2 = post.donate_author(post.posts[0].id.to_string(), U128::from(100));
+        let donate3 = post.donate_author(post.posts[0].id.to_string(), U128::from(100));
+        assert_eq!(post.posts[0].donation_amount, U128::from(400));
+    }
+
 }
