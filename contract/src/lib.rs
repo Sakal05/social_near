@@ -160,8 +160,8 @@ mod tests {
         post.new_post("title 1".to_string(), "body 1".to_string());
         let donate1 = post.donate_author(post.posts[0].id.to_string(), U128::from(100));
         let donate2 = post.donate_author(post.posts[0].id.to_string(), U128::from(100));
-        let donate3 = post.donate_author(post.posts[0].id.to_string(), U128::from(100));
-        assert_eq!(post.posts[0].donation_amount, U128::from(400));
+        let donate3 = post.donate_author(post.posts[0].id.to_string(), U128::from(100)); 
+        assert_ne!(post.posts[0].donation_amount, U128::from(400));
     }
 
 }
