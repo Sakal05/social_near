@@ -8,8 +8,10 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
+ipfs-api = "0.17.0"
 near-sdk = "4.0.0"
 serde = "1.0.152"
+tokio = {version = "1.24.2", features = ["full"]}
 uint = { version = "0.9.3", default-features = false }
 uuid = {version = "1.2.2", features = ["v4"]}
 
