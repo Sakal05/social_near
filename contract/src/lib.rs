@@ -160,10 +160,8 @@ mod tests {
         post.new_post("title".to_string(), "body".to_string(), Some(IMAGE.to_string()));
         post.new_post("title 1".to_string(), "body 1".to_string(), Some(IMAGE.to_string()));
         let posts = post.get_posts();
-        println!("Id: {}, Author: {}", posts[0].id, posts[0].author);
         assert_eq!(posts.len(), 2);
         assert_eq!(posts[0].body, "body".to_string());
-        println!("{:?}", posts);
     }
 
     //test search post function
@@ -175,7 +173,6 @@ mod tests {
         let posts = post.search_posts("title".to_string());
         assert_eq!(posts.len(), 2);
         assert_eq!(posts[1].body, "body 1".to_string());
-        println!("{:?}", posts);
     }
 
     //test delete posts
@@ -187,7 +184,6 @@ mod tests {
         post.delete_post(post.posts[0].id.to_string());
         let posts = post.get_posts();
         assert_eq!(posts.len(), 1);
-        println!("{:?}", posts);
     }
 
     //test success donate function
