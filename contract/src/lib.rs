@@ -8,6 +8,9 @@ use near_sdk::json_types::U128;
 use ipfs_api::{ IpfsClient, IpfsApi };
 use std::io::Cursor;
 
+//for testing purpose 
+const IMAGE: &str = "https://static.vecteezy.com/packs/media/vectors/term-bg-1-3d6355ab.jpg";
+
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Post {
     pub id: String,
@@ -36,15 +39,22 @@ impl Posts {
 
     //function to create a new post
     pub fn new_post(&mut self, title: String, body: String, image: Option<String>) {
+        let image_to_ipfs = write_image_to_ipfs(image.unwrap_or_default());
+        let image_hash = match image_to_ipfs {
+            Ok(hash) => Some(hash.clone()),
+            Err(err) => None
+        };
         self.posts.push(Post {
             id: Uuid::new_v4().to_string(),
             author: env::predecessor_account_id(),
             title,
             body,
-            image,
+            image: image_hash,
             donation_amount: U128::from(0),
         });
         env::log_str("Post Created Successfully");
+        env::log_str(&format!("{:?}", self));
+
     }
 
     //function to get all posts
@@ -108,28 +118,17 @@ fn write_image_to_ipfs(image_url: String) -> Result<String, ipfs_api::Error> {
     }
 }
 
-//function to write hash of image data into IPFS filesystem
-// #[actix_rt::main]
-// async fn write_image_to_ipfs(image_data: String) {
-//     let client = IpfsClient::default();
-//     let data = Cursor::new("Hello World!");
-
-//     match client.add(data).await {
-//         Ok(res) => println!("{}", res.hash),
-//         Err(e) => eprintln!("error adding file: {}", e),
-//     }
-// }
 
 #[cfg(test)]
 mod test_ipfs {
     use std::io::Cursor;
     use ipfs_api::{ IpfsClient, IpfsApi };
-    use near_sdk::env;
+    use crate::IMAGE;
     //test write image to ipfs
     #[test]
     fn test_write_image_to_ipfs() {
         let client = IpfsClient::default();
-        let data = Cursor::new("Hello World");
+        let data = Cursor::new(IMAGE.to_string());
         let res = client.add(data);
         let res = tokio::runtime::Runtime::new().unwrap().block_on(res);
         match res {
@@ -137,20 +136,20 @@ mod test_ipfs {
             Err(e) => println!("Error: {}", e),
         }
     }
+
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     //for testing purposes
+    use crate::IMAGE;
 
     #[test]
     pub fn new_post_with_title() {
         let mut post = Posts::new();
-        let IMAGE: String =
-            "https://assets-global.website-files.com/5f6b7190899f41fb70882d08/5f88764e3ed8f3d00b60aa32_team-hero-hex.webp".to_string();
-        post.new_post("title".to_string(), "body".to_string(), Some(IMAGE.clone()));
-        post.new_post("title 1".to_string(), "body 1".to_string(), Some(IMAGE.clone()));
+        post.new_post("title".to_string(), "body".to_string(), Some(IMAGE.to_string()));
+        post.new_post("title 1".to_string(), "body 1".to_string(), Some(IMAGE.to_string()));
         assert_eq!(post.posts.len(), 2);
     }
 
@@ -158,26 +157,21 @@ mod tests {
     #[test]
     pub fn get_posts() {
         let mut post = Posts::new();
-        let IMAGE: String =
-            "https://assets-global.website-files.com/5f6b7190899f41fb70882d08/5f88764e3ed8f3d00b60aa32_team-hero-hex.webp".to_string();
-
-        post.new_post("title".to_string(), "body".to_string(), Some(IMAGE.clone()));
-        post.new_post("title 1".to_string(), "body 1".to_string(), Some(IMAGE.clone()));
+        post.new_post("title".to_string(), "body".to_string(), Some(IMAGE.to_string()));
+        post.new_post("title 1".to_string(), "body 1".to_string(), Some(IMAGE.to_string()));
         let posts = post.get_posts();
         println!("Id: {}, Author: {}", posts[0].id, posts[0].author);
         assert_eq!(posts.len(), 2);
         assert_eq!(posts[0].body, "body".to_string());
+        println!("{:?}", posts);
     }
 
     //test search post function
     #[test]
     pub fn search_posts() {
         let mut post = Posts::new();
-        let IMAGE: String =
-            "https://assets-global.website-files.com/5f6b7190899f41fb70882d08/5f88764e3ed8f3d00b60aa32_team-hero-hex.webp".to_string();
-
-        post.new_post("title".to_string(), "body".to_string(), Some(IMAGE.clone()));
-        post.new_post("title 1".to_string(), "body 1".to_string(), Some(IMAGE.clone()));
+        post.new_post("title".to_string(), "body".to_string(), Some(IMAGE.to_string()));
+        post.new_post("title 1".to_string(), "body 1".to_string(), Some(IMAGE.to_string()));
         let posts = post.search_posts("title".to_string());
         assert_eq!(posts.len(), 2);
         assert_eq!(posts[1].body, "body 1".to_string());
@@ -188,10 +182,8 @@ mod tests {
     #[test]
     pub fn delete_post() {
         let mut post = Posts::new();
-        let IMAGE: String =
-            "https://assets-global.website-files.com/5f6b7190899f41fb70882d08/5f88764e3ed8f3d00b60aa32_team-hero-hex.webp".to_string();
-        post.new_post("title".to_string(), "body".to_string(), Some(IMAGE.clone()));
-        post.new_post("title 1".to_string(), "body 1".to_string(), Some(IMAGE.clone()));
+        post.new_post("title".to_string(), "body".to_string(), Some(IMAGE.to_string()));
+        post.new_post("title 1".to_string(), "body 1".to_string(), Some(IMAGE.to_string()));
         post.delete_post(post.posts[0].id.to_string());
         let posts = post.get_posts();
         assert_eq!(posts.len(), 1);
@@ -202,11 +194,8 @@ mod tests {
     #[test]
     pub fn sucess_donate_author() {
         let mut post = Posts::new();
-        let IMAGE: String =
-            "https://assets-global.website-files.com/5f6b7190899f41fb70882d08/5f88764e3ed8f3d00b60aa32_team-hero-hex.webp".to_string();
-
-        post.new_post("title".to_string(), "body".to_string(), Some(IMAGE.clone()));
-        post.new_post("title 1".to_string(), "body 1".to_string(), Some(IMAGE.clone()));
+        post.new_post("title".to_string(), "body".to_string(), Some(IMAGE.to_string()));
+        post.new_post("title 1".to_string(), "body 1".to_string(), Some(IMAGE.to_string()));
         let donate1 = post.donate_author(post.posts[0].id.to_string(), U128::from(100));
         let donate2 = post.donate_author(post.posts[0].id.to_string(), U128::from(100));
         let donate3 = post.donate_author(post.posts[0].id.to_string(), U128::from(100));
@@ -217,11 +206,8 @@ mod tests {
     #[test]
     pub fn fail_donate_author() {
         let mut post = Posts::new();
-        let IMAGE: String =
-            "https://assets-global.website-files.com/5f6b7190899f41fb70882d08/5f88764e3ed8f3d00b60aa32_team-hero-hex.webp".to_string();
-
-        post.new_post("title".to_string(), "body".to_string(), Some(IMAGE.clone()));
-        post.new_post("title 1".to_string(), "body 1".to_string(), Some(IMAGE.clone()));
+        post.new_post("title".to_string(), "body".to_string(), None);
+        post.new_post("title 1".to_string(), "body 1".to_string(), None);
         let donate1 = post.donate_author(post.posts[0].id.to_string(), U128::from(100));
         let donate2 = post.donate_author(post.posts[0].id.to_string(), U128::from(100));
         let donate3 = post.donate_author(post.posts[0].id.to_string(), U128::from(100));
